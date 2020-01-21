@@ -1,0 +1,33 @@
+#geopm
+
+geopmlaunch = job 할당
+	opt
+		--geopm-report=path 			리포트파일 path
+		--geopm-roport-signals=signals 	기본값 이외의 추가 측정 값을 보고서에 삽입
+		--geopm-trace=path				각 컴퓨팅 노드에 생성되는 trace file의 path, 주로 디버깅 툴 
+		--geopm-trace-signal=signals	trace file에 기본값 이외의 추가 측정 값을 샘플링, 집계
+		--geopm-profile=name			report , trace file에 저장될 프로필 이름
+		--geopm-ctl=process|pthread|application	geopm 런타임에서 process,pthread,app 세가지 방법 
+								Process는 노드당 하나의 추가 MPI를 할당
+								Pthread는 노드당 하나의 MPI프로세스에서 스레드를 생성
+								Application는 백그라운드에서 ‘gigmctl’ 애플리케이션을 시작
+		--geopm-agent=agent				geopm 런타임에 사용되는 제어알고리즘을 정의
+								Monitor 기본값 프로파일링 기능만 사용가능
+								Power Balancer 정해진 전원 인가량 이하로 최적화	
+								Power governor 전원 인가량 강제 고정
+								Frequency map 각 영역을 특정 주파수로 실행
+								Energy efficient 에너지 절약
+		--geopm-policy=policy			agent plugin을 구성하는데 사용되는 json 파일
+		--geopm-shmkey=key				shared memory에 사용할 특정 접두사 지정
+		--geopm-timeout=sec				app이 shared memory를 통해 geopm컨트롤러가 연결될 때까지 대기해야 하는 시간
+		--geopm-plugin-path=path		geopm 플러그인의 검색경로
+		--geopm-debug-attach=rank		geopm pmi 래퍼를 사용할 때 gdb와 같은 디버거를 연결 할 수 있도록 하는 설정
+
+		--geopm-region-barrier			?? 보통 디버깅 용도로 사용
+		--geopm-preload					런타임에 libgeopm.so 를 연결하려면 사용
+		--geopm-hyperthreads-disable	하이퍼스레드 사용 하지 않도록 설정
+		--geopm-ctl-disable				명령을 기본 launcher에 전달할 때 사용
+								이 옵션 지정 시 geopm런타임을 시작하지 않음
+
+geopmread = readable 노드 signal 확인
+geopmwrite = writable 노드 signal 확인

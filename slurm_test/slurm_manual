@@ -1,0 +1,46 @@
+srun [Opt..] File
+    Interactive 작업 제출
+
+sbatch [Opt..] Script
+    Script를 이용한 Job 제출 (예시 ex_sbatch.sh)
+
+scancel JobId
+    Job 삭제
+
+squeue
+    Job 상태 확인 
+
+smap
+    Job 상태 및 Node 상태 확인
+
+sinfo [Opt..]
+    Node 정보 확인
+
+scontrol show (jobs,node,JobId,)
+    job,node,JobId 에 대한 정보 상세 확인
+
+sacct -j jobid --format format
+    작업 정보 조회
+
+sstat  -j jobid --format format 
+    진행중인 작업 정보 조회
+
+strigger   		
+    이벤트 트리거를 설정, 가져 오기 또는 검사하는 데 사용됩(노드가 다운되거나 작업과 관련된 제한된 이벤트가 포함)
+
+sview  		
+    slurm이 관리하는 작업, 파티션 및 노드의 상태 정보를 얻고 업데이트하는 데 사용되는 그래픽 사용자 인터페이스
+
+salloc  
+    자원을 작업 태스크에 실시간으로 할당하는 데 사용됩니다. 종종 이것은 자원을 할당하고 쉘을 생성하는 데 사용(srun병렬작업을 실행)
+
+1.노드점유
+salloc --partition=ivy_v100_1 --nodes=1 --time=01:00:00 --comment {SBATCH 옵션이름}
+2-1.점유된 상태에서 컴파일을 위한 노드 진입
+srun --pty bash
+2-2.점유된 상태에서 응용프로그램 실행
+srun -n 2 (응용프로그램 실행파일)
+3.진입 노드에서 나가기
+exit
+4.노드 점유 종료
+scancel [Job_ID]
