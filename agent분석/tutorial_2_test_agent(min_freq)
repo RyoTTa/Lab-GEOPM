@@ -1,0 +1,155 @@
+##### geopm 1.1.0 #####
+Start Time: Sat Mar 07 17:05:46 2020
+Profile: /home/ryotta205/geopm/tutorial/./tutorial_2
+Agent: test_agent
+Policy: {"POWER_PACKAGE_LIMIT_TOTAL": 150, "FREQ_MIN": 1.2e9, "FREQ_MAX": 3.2e9}
+
+
+Host: c1
+Final online freq map: 
+
+Region tutorial_dgemm (0x00000000c82f28bd):
+    runtime (sec): 395.436
+    sync-runtime (sec): 393.193
+    package-energy (joules): 19799.2
+    dram-energy (joules): 4557.71
+    power (watts): 50.3549
+    frequency (%): 50.0387
+    frequency (Hz): 1.20093e+09
+    network-time (sec): 0
+    count: 10
+Region tutorial_stream (0x000000008a1e10cd):
+    runtime (sec): 118.059
+    sync-runtime (sec): 112.37
+    package-energy (joules): 8015.82
+    dram-energy (joules): 2853.43
+    power (watts): 71.3342
+    frequency (%): 50.0507
+    frequency (Hz): 1.20122e+09
+    network-time (sec): 0
+    count: 20
+Region tutorial_sleep (0x000000009803a79a):
+    runtime (sec): 10.0009
+    sync-runtime (sec): 10.0015
+    package-energy (joules): 330.86
+    dram-energy (joules): 74.7375
+    power (watts): 33.081
+    frequency (%): 50.6973
+    frequency (Hz): 1.21674e+09
+    network-time (sec): 0
+    count: 10
+Region tutorial_all2all (0x00000000d88e02a5):
+    runtime (sec): 5.24447
+    sync-runtime (sec): 1.81474
+    package-energy (joules): 86.657
+    dram-energy (joules): 14.0884
+    power (watts): 47.7516
+    frequency (%): 50.166
+    frequency (Hz): 1.20398e+09
+    network-time (sec): 5.24447
+    count: 10
+Region unmarked-region (0x00000000725e8066):
+    runtime (sec): 0.058586
+    sync-runtime (sec): 11.3726
+    package-energy (joules): 635.066
+    dram-energy (joules): 213.704
+    power (watts): 55.8419
+    frequency (%): 50.0758
+    frequency (Hz): 1.20182e+09
+    network-time (sec): 0
+    count: 0
+Epoch Totals:
+    runtime (sec): 528.752
+    sync-runtime (sec): 528.752
+    package-energy (joules): 28867.6
+    dram-energy (joules): 7713.67
+    power (watts): 54.5957
+    frequency (%): 50.0429
+    frequency (Hz): 1.20103e+09
+    network-time (sec): 5.24447
+    count: 10
+    epoch-runtime-ignore (sec): 0
+Application Totals:
+    runtime (sec): 528.834
+    package-energy (joules): 28872.5
+    dram-energy (joules): 7714.23
+    power (watts): 54.5966
+    network-time (sec): 5.24447
+    ignore-time (sec): 0
+    geopmctl memory HWM: 62928 kB
+    geopmctl network BW (B/sec): 0
+
+Host: c2
+Final online freq map: 
+
+Region tutorial_dgemm (0x00000000c82f28bd):
+    runtime (sec): 397.515
+    sync-runtime (sec): 394.31
+    package-energy (joules): 20281.9
+    dram-energy (joules): 4089.66
+    power (watts): 51.4365
+    frequency (%): 50.118
+    frequency (Hz): 1.20283e+09
+    network-time (sec): 0
+    count: 10
+Region tutorial_stream (0x000000008a1e10cd):
+    runtime (sec): 118.243
+    sync-runtime (sec): 112.176
+    package-energy (joules): 8065.45
+    dram-energy (joules): 2534.93
+    power (watts): 71.9001
+    frequency (%): 50.1005
+    frequency (Hz): 1.20241e+09
+    network-time (sec): 0
+    count: 20
+Region tutorial_sleep (0x000000009803a79a):
+    runtime (sec): 10.001
+    sync-runtime (sec): 10.0007
+    package-energy (joules): 346.736
+    dram-energy (joules): 67.7008
+    power (watts): 34.6711
+    frequency (%): 51.3608
+    frequency (Hz): 1.23266e+09
+    network-time (sec): 0
+    count: 10
+Region tutorial_all2all (0x00000000d88e02a5):
+    runtime (sec): 3.00713
+    sync-runtime (sec): 0.133014
+    package-energy (joules): 6.40698
+    dram-energy (joules): 1.099
+    power (watts): 48.1678
+    frequency (%): 50.5462
+    frequency (Hz): 1.21311e+09
+    network-time (sec): 3.00713
+    count: 10
+Region unmarked-region (0x00000000725e8066):
+    runtime (sec): 0.0333868
+    sync-runtime (sec): 12.1579
+    package-energy (joules): 645.58
+    dram-energy (joules): 201.268
+    power (watts): 53.0997
+    frequency (%): 50.1366
+    frequency (Hz): 1.20328e+09
+    network-time (sec): 0
+    count: 0
+Epoch Totals:
+    runtime (sec): 528.778
+    sync-runtime (sec): 528.777
+    package-energy (joules): 29346.1
+    dram-energy (joules): 6894.65
+    power (watts): 55.498
+    frequency (%): 50.1163
+    frequency (Hz): 1.20279e+09
+    network-time (sec): 3.00713
+    count: 10
+    epoch-runtime-ignore (sec): 0
+Application Totals:
+    runtime (sec): 528.816
+    package-energy (joules): 29347.9
+    dram-energy (joules): 6894.82
+    power (watts): 55.4973
+    network-time (sec): 3.00713
+    ignore-time (sec): 0
+    geopmctl memory HWM: 63040 kB
+    geopmctl network BW (B/sec): 0
+
