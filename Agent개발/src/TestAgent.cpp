@@ -36,6 +36,7 @@
 #include <cmath>
 #include <iomanip>
 #include <utility>
+#include <iostream>
 
 #include "contrib/json11/json11.hpp"
 
@@ -49,6 +50,22 @@
 #include "Helper.hpp"
 #include "Exception.hpp"
 #include "config.h"
+
+/*perf_event_oepn test*/
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/syscall.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <linux/perf_event.h>
+#include <linux/hw_breakpoint.h>
+#include <asm/unistd.h>
+#include <errno.h>
+#include <stdint.h>
+#include <inttypes.h>
+
+/*perf_event_oepn test*/
 
 using json11::Json;
 
@@ -84,12 +101,22 @@ namespace geopm
         , m_do_send_policy(false)
         , m_perf_margin(M_POLICY_PERF_MARGIN_DEFAULT)
     {
+        memset(&pea, 0, sizeof(struct perf_event_attr));
+        pea.type = PERF_TYPE_HARDWARE;
+        pea.size = sizeof(struct perf_event_attr);
+        pea.config = PERF_COUNT_HW_CPU_CYCLES;
+        pea.disabled = 1;
+        pea.exclude_kernel = 1;
+        pea.exclude_hv = 1;
 
+        fd = syscall(__NR_perf_event_open, &pea, 0, -1, -1, 0);
+        ioctl(fd, PERF_EVENT_IOC_RESET, 0);
+        ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
     }
 
     std::string TestAgent::plugin_name(void)
     {
-        return "energy_efficient";
+        return "test_agent";
     }
 
     std::unique_ptr<Agent> TestAgent::make_plugin(void)
@@ -212,11 +239,12 @@ namespace geopm
                     m_target_freq[ctl_idx] = region_it->second->freq();
                 }
                 else {
-                    throw Exception("TestAgent::" + std::string(__func__) +
+                    throw Exception("EnergyEfficientAgent::" + std::string(__func__) +
                                     "(): unknown target frequency hash = " + std::to_string(hash),
                                     GEOPM_ERROR_RUNTIME, __FILE__, __LINE__);
                 }
             }
+	    std::cout << ctl_idx << ' ' << m_last_region_info[ctl_idx].cycles << std::endl;
         }
         m_freq_governor->adjust_platform(m_target_freq);
     }
@@ -226,12 +254,20 @@ namespace geopm
         double freq_min = m_freq_governor->get_frequency_min();
         double freq_max = m_freq_governor->get_frequency_max();
         double freq_step = m_freq_governor->get_frequency_step();
+
+        ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
+        read(fd, &count, sizeof(long long));
+
         for (size_t ctl_idx = 0; ctl_idx < (size_t) m_num_freq_ctl_domain; ++ctl_idx) {
             struct m_region_info_s current_region_info {
                 .hash = (uint64_t)m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_HASH][ctl_idx]),
                 .hint = (uint64_t)m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_HINT][ctl_idx]),
                 .runtime = m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_RUNTIME][ctl_idx]),
-                .count = (uint64_t)m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_COUNT][ctl_idx])};
+                .count = (uint64_t)m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_COUNT][ctl_idx]),
+		        .freq = m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_FREQ][ctl_idx]),
+		        .temp = m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_TEMP][ctl_idx]),
+                .cycles = count
+                };
             // If region hash has changed, or region count changed for the same region
             // update current region (entry)
             if (m_last_region_info[ctl_idx].hash != current_region_info.hash ||
@@ -271,6 +307,10 @@ namespace geopm
                 ++m_samples_since_boundary[ctl_idx];
             }
         }
+
+        ioctl(fd, PERF_EVENT_IOC_RESET, 0);
+        ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
+        count=0;
     }
 
     bool TestAgent::do_send_sample(void) const
@@ -378,10 +418,12 @@ namespace geopm
         const struct m_region_info_s DEFAULT_REGION { .hash = GEOPM_REGION_HASH_UNMARKED,
                                                       .hint = GEOPM_REGION_HINT_UNKNOWN,
                                                       .runtime = 0.0,
-                                                      .count = 0};
+                                                      .count = 0,
+						      .freq = 0.0,
+						      .temp = 0.0};
         m_last_region_info = std::vector<struct m_region_info_s>(m_num_freq_ctl_domain, DEFAULT_REGION);
         m_target_freq.resize(m_num_freq_ctl_domain, m_freq_governor->get_frequency_max());
-        std::vector<std::string> signal_names = {"REGION_HASH", "REGION_HINT", "REGION_RUNTIME", "REGION_COUNT"};
+        std::vector<std::string> signal_names = {"REGION_HASH", "REGION_HINT", "REGION_RUNTIME", "REGION_COUNT", "FREQUENCY", "TEMPERATURE_CORE"};
 
         for (size_t sig_idx = 0; sig_idx < signal_names.size(); ++sig_idx) {
             m_signal_idx.push_back(std::vector<int>());

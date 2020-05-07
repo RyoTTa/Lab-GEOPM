@@ -41,6 +41,20 @@
 
 #include "Agent.hpp"
 
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/syscall.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <linux/perf_event.h>
+#include <linux/hw_breakpoint.h>
+#include <asm/unistd.h>
+#include <errno.h>
+#include <stdint.h>
+#include <inttypes.h>
+
 namespace geopm
 {
     class PlatformIO;
@@ -80,6 +94,26 @@ namespace geopm
             static std::unique_ptr<Agent> make_plugin(void);
             static std::vector<std::string> policy_names(void);
             static std::vector<std::string> sample_names(void);
+            
+            /*perf_event_open test*/
+            int fd;
+            struct perf_event_attr pea;
+            uint64_t id1, id2;
+            uint64_t val1, val2;
+            //char buf[4096];
+            //struct read_format* rf = (struct read_format*) buf;
+            long long count;
+
+            struct read_format {
+                uint64_t nr;
+                struct {
+                    uint64_t value;
+                    uint64_t id;
+                } values[];
+            };
+
+            /*perf_event_open test*/
+            
         private:
             bool update_policy(const std::vector<double> &in_policy);
             void init_platform_io(void);
@@ -97,6 +131,8 @@ namespace geopm
                 M_SIGNAL_REGION_HINT,
                 M_SIGNAL_REGION_RUNTIME,
                 M_SIGNAL_REGION_COUNT,
+		            M_SIGNAL_REGION_FREQ,
+		            M_SIGNAL_REGION_TEMP,
                 M_NUM_SIGNAL,
             };
 
@@ -105,6 +141,9 @@ namespace geopm
                 uint64_t hint;
                 double runtime;
                 uint64_t count;
+		            double freq;
+		            double temp;
+                long long cycles;
             };
 
             const int M_PRECISION;
