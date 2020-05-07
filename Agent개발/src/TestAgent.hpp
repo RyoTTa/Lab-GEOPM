@@ -54,6 +54,8 @@
 #include <errno.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <fstream>
+#include <string>
 
 namespace geopm
 {
@@ -111,6 +113,11 @@ namespace geopm
                     uint64_t id;
                 } values[];
             };
+            
+            std::ofstream outFile;
+            std::ifstream inFile;
+            
+            std::string model_name;
 
             /*perf_event_open test*/
             

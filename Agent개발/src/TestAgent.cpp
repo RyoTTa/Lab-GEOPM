@@ -64,6 +64,8 @@
 #include <errno.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <fstream>
+#include <string>
 
 /*perf_event_oepn test*/
 
@@ -112,6 +114,17 @@ namespace geopm
         fd = syscall(__NR_perf_event_open, &pea, 0, -1, -1, 0);
         ioctl(fd, PERF_EVENT_IOC_RESET, 0);
         ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
+        
+        outFile.open("/root/test.dat");
+        inFile.open("/proc/cpuinfo");
+        
+        for(int i=0; i<5;i++){
+            getline(inFile,model_name);
+            if(i == 4){
+                outFile << model_name << "\n";
+            }
+        }
+        
     }
 
     std::string TestAgent::plugin_name(void)
@@ -244,7 +257,7 @@ namespace geopm
                                     GEOPM_ERROR_RUNTIME, __FILE__, __LINE__);
                 }
             }
-	    std::cout << ctl_idx << ' ' << m_last_region_info[ctl_idx].cycles << std::endl;
+	    //std::cout << ctl_idx << ' ' << m_last_region_info[ctl_idx].cycles << std::endl;
         }
         m_freq_governor->adjust_platform(m_target_freq);
     }
@@ -258,16 +271,19 @@ namespace geopm
         ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
         read(fd, &count, sizeof(long long));
 
+        outFile << model_name << "\n";
+        //outFile << "hostname : " <<' ' << getenv("lscpu") << "\n";
         for (size_t ctl_idx = 0; ctl_idx < (size_t) m_num_freq_ctl_domain; ++ctl_idx) {
             struct m_region_info_s current_region_info {
                 .hash = (uint64_t)m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_HASH][ctl_idx]),
                 .hint = (uint64_t)m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_HINT][ctl_idx]),
                 .runtime = m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_RUNTIME][ctl_idx]),
                 .count = (uint64_t)m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_COUNT][ctl_idx]),
-		        .freq = m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_FREQ][ctl_idx]),
-		        .temp = m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_TEMP][ctl_idx]),
+		            .freq = m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_FREQ][ctl_idx]),
+		            .temp = m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_TEMP][ctl_idx]),
                 .cycles = count
                 };
+            outFile << ctl_idx <<' ' << current_region_info.cycles << "\n";
             // If region hash has changed, or region count changed for the same region
             // update current region (entry)
             if (m_last_region_info[ctl_idx].hash != current_region_info.hash ||
