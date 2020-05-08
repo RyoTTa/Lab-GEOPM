@@ -98,7 +98,7 @@ namespace geopm
             static std::vector<std::string> sample_names(void);
             
             /*perf_event_open test*/
-            int fd;
+            int fd[12];
             struct perf_event_attr pea;
             uint64_t id1, id2;
             uint64_t val1, val2;

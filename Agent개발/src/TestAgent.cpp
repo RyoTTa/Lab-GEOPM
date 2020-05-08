@@ -66,6 +66,7 @@
 #include <inttypes.h>
 #include <fstream>
 #include <string>
+#include <stdlib.h>
 
 /*perf_event_oepn test*/
 
@@ -103,17 +104,23 @@ namespace geopm
         , m_do_send_policy(false)
         , m_perf_margin(M_POLICY_PERF_MARGIN_DEFAULT)
     {
+    
+    /*perf_event_open test*/
         memset(&pea, 0, sizeof(struct perf_event_attr));
-        pea.type = PERF_TYPE_HARDWARE;
+        //pea.type = PERF_TYPE_HARDWARE;
+        pea.type = PERF_TYPE_SOFTWARE;
         pea.size = sizeof(struct perf_event_attr);
-        pea.config = PERF_COUNT_HW_CPU_CYCLES;
+        //pea.config = PERF_COUNT_HW_INSTRUCTIONS;
+        pea.config = PERF_COUNT_SW_PAGE_FAULTS;
         pea.disabled = 1;
         pea.exclude_kernel = 1;
         pea.exclude_hv = 1;
-
-        fd = syscall(__NR_perf_event_open, &pea, 0, -1, -1, 0);
-        ioctl(fd, PERF_EVENT_IOC_RESET, 0);
-        ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
+        
+        for(int i=0; i<12; i++){
+            fd[i] = syscall(__NR_perf_event_open, &pea, -1, i, -1, 0);
+            ioctl(fd[i], PERF_EVENT_IOC_RESET, 0);
+            ioctl(fd[i], PERF_EVENT_IOC_ENABLE, 0);
+        }
         
         outFile.open("/root/test.dat");
         inFile.open("/proc/cpuinfo");
@@ -124,6 +131,7 @@ namespace geopm
                 outFile << model_name << "\n";
             }
         }
+    /*perf_event_open test*/
         
     }
 
@@ -229,7 +237,7 @@ namespace geopm
         return m_freq_governor->do_write_batch();
     }
 
-    void TestAgent::adjust_platform(const std::vector<double> &in_policy)//플랫폼 조정 hash, hint 값을 사용함
+    void TestAgent::adjust_platform(const std::vector<double> &in_policy)//�÷��� ���� hash, hint ���� �����
     {
         update_policy(in_policy);
         for (size_t ctl_idx = 0; ctl_idx < (size_t) m_num_freq_ctl_domain; ++ctl_idx) {
@@ -262,25 +270,25 @@ namespace geopm
         m_freq_governor->adjust_platform(m_target_freq);
     }
 
-    void TestAgent::sample_platform(std::vector<double> &out_sample)//샘플링하여 region을 수정?
+    void TestAgent::sample_platform(std::vector<double> &out_sample)//���ø��Ͽ� region�� ����?
     {
         double freq_min = m_freq_governor->get_frequency_min();
         double freq_max = m_freq_governor->get_frequency_max();
         double freq_step = m_freq_governor->get_frequency_step();
 
-        ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
-        read(fd, &count, sizeof(long long));
-
         outFile << model_name << "\n";
         //outFile << "hostname : " <<' ' << getenv("lscpu") << "\n";
         for (size_t ctl_idx = 0; ctl_idx < (size_t) m_num_freq_ctl_domain; ++ctl_idx) {
+            ioctl(fd[ctl_idx], PERF_EVENT_IOC_DISABLE, 0);
+            read(fd[ctl_idx], &count, sizeof(long long));
+            
             struct m_region_info_s current_region_info {
                 .hash = (uint64_t)m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_HASH][ctl_idx]),
                 .hint = (uint64_t)m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_HINT][ctl_idx]),
                 .runtime = m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_RUNTIME][ctl_idx]),
                 .count = (uint64_t)m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_COUNT][ctl_idx]),
-		            .freq = m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_FREQ][ctl_idx]),
-		            .temp = m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_TEMP][ctl_idx]),
+		        .freq = m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_FREQ][ctl_idx]),
+		        .temp = m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_TEMP][ctl_idx]),
                 .cycles = count
                 };
             outFile << ctl_idx <<' ' << current_region_info.cycles << "\n";
@@ -322,11 +330,10 @@ namespace geopm
             else {
                 ++m_samples_since_boundary[ctl_idx];
             }
+            ioctl(fd[ctl_idx], PERF_EVENT_IOC_RESET, 0);
+            ioctl(fd[ctl_idx], PERF_EVENT_IOC_ENABLE, 0);
+            count=0;
         }
-
-        ioctl(fd, PERF_EVENT_IOC_RESET, 0);
-        ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
-        count=0;
     }
 
     bool TestAgent::do_send_sample(void) const
@@ -428,7 +435,7 @@ namespace geopm
         m_platform_io.write_control("FREQUENCY", GEOPM_DOMAIN_BOARD, 0, policy[M_POLICY_FREQ_FIXED]);
     }
 
-    void TestAgent::init_platform_io(void)   //플랫폼 초기화
+    void TestAgent::init_platform_io(void)   //�÷��� �ʱ�ȭ
     {
         m_freq_governor->init_platform_io();
         const struct m_region_info_s DEFAULT_REGION { .hash = GEOPM_REGION_HASH_UNMARKED,
