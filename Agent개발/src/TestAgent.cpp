@@ -108,29 +108,32 @@ namespace geopm
     /*perf_event_open test*/
         memset(&pea, 0, sizeof(struct perf_event_attr));
         //pea.type = PERF_TYPE_HARDWARE;
-        pea.type = PERF_TYPE_SOFTWARE;
+        //pea.type = PERF_TYPE_SOFTWARE;
+        pea.type = PERF_TYPE_HW_CACHE;
         pea.size = sizeof(struct perf_event_attr);
-        //pea.config = PERF_COUNT_HW_INSTRUCTIONS;
-        pea.config = PERF_COUNT_SW_PAGE_FAULTS;
+        //pea.config = PERF_COUNT_HW_CACHE_MISSES;
+        //pea.config = PERF_COUNT_SW_PAGE_FAULTS;
+        pea.config = (PERF_COUNT_HW_CACHE_LL)|(PERF_COUNT_HW_CACHE_OP_WRITE << 8)|(PERF_COUNT_HW_CACHE_RESULT_MISS << 16);
         pea.disabled = 1;
         pea.exclude_kernel = 1;
         pea.exclude_hv = 1;
         
+        /*multi file descriptor*/
         for(int i=0; i<12; i++){
             fd[i] = syscall(__NR_perf_event_open, &pea, -1, i, -1, 0);
             ioctl(fd[i], PERF_EVENT_IOC_RESET, 0);
             ioctl(fd[i], PERF_EVENT_IOC_ENABLE, 0);
         }
-        
+        /*single file descriptor*/
+       /*
+        fd[0] = syscall(__NR_perf_event_open, &pea, 0, -1, -1, 0);
+        ioctl(fd[0], PERF_EVENT_IOC_RESET, 0);
+        ioctl(fd[0], PERF_EVENT_IOC_ENABLE, 0);
+        */
         outFile.open("/root/test.dat");
-        inFile.open("/proc/cpuinfo");
+        inFile.open("/etc/hostname");
         
-        for(int i=0; i<5;i++){
-            getline(inFile,model_name);
-            if(i == 4){
-                outFile << model_name << "\n";
-            }
-        }
+        getline(inFile,model_name);
     /*perf_event_open test*/
         
     }
@@ -265,7 +268,8 @@ namespace geopm
                                     GEOPM_ERROR_RUNTIME, __FILE__, __LINE__);
                 }
             }
-	    //std::cout << ctl_idx << ' ' << m_last_region_info[ctl_idx].cycles << std::endl;
+            //std::cout << ctl_idx << ' ' << m_last_region_info[ctl_idx].hostnames << std::endl;
+	        //std::cout << ctl_idx << ' ' << m_last_region_info[ctl_idx].cycles << std::endl;
         }
         m_freq_governor->adjust_platform(m_target_freq);
     }
@@ -279,9 +283,15 @@ namespace geopm
         outFile << model_name << "\n";
         //outFile << "hostname : " <<' ' << getenv("lscpu") << "\n";
         for (size_t ctl_idx = 0; ctl_idx < (size_t) m_num_freq_ctl_domain; ++ctl_idx) {
+            
+            /*multi file descriptor*/
             ioctl(fd[ctl_idx], PERF_EVENT_IOC_DISABLE, 0);
             read(fd[ctl_idx], &count, sizeof(long long));
-            
+            /*single file descriptor*/
+            /*
+            ioctl(fd[0], PERF_EVENT_IOC_DISABLE, 0);
+            read(fd[0], &count, sizeof(long long));
+            */
             struct m_region_info_s current_region_info {
                 .hash = (uint64_t)m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_HASH][ctl_idx]),
                 .hint = (uint64_t)m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_HINT][ctl_idx]),
@@ -289,7 +299,8 @@ namespace geopm
                 .count = (uint64_t)m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_COUNT][ctl_idx]),
 		        .freq = m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_FREQ][ctl_idx]),
 		        .temp = m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_TEMP][ctl_idx]),
-                .cycles = count
+                .cycles = count,
+                .hostnames = model_name
                 };
             outFile << ctl_idx <<' ' << current_region_info.cycles << "\n";
             // If region hash has changed, or region count changed for the same region
@@ -330,10 +341,17 @@ namespace geopm
             else {
                 ++m_samples_since_boundary[ctl_idx];
             }
+            //multi file descriptor
             ioctl(fd[ctl_idx], PERF_EVENT_IOC_RESET, 0);
             ioctl(fd[ctl_idx], PERF_EVENT_IOC_ENABLE, 0);
             count=0;
         }
+        //single file descriptor
+        /*
+        ioctl(fd[0], PERF_EVENT_IOC_RESET, 0);
+        ioctl(fd[0], PERF_EVENT_IOC_ENABLE, 0);
+        count=0;
+        */
     }
 
     bool TestAgent::do_send_sample(void) const
@@ -442,8 +460,8 @@ namespace geopm
                                                       .hint = GEOPM_REGION_HINT_UNKNOWN,
                                                       .runtime = 0.0,
                                                       .count = 0,
-						      .freq = 0.0,
-						      .temp = 0.0};
+						                                .freq = 0.0,
+						                                .temp = 0.0};
         m_last_region_info = std::vector<struct m_region_info_s>(m_num_freq_ctl_domain, DEFAULT_REGION);
         m_target_freq.resize(m_num_freq_ctl_domain, m_freq_governor->get_frequency_max());
         std::vector<std::string> signal_names = {"REGION_HASH", "REGION_HINT", "REGION_RUNTIME", "REGION_COUNT", "FREQUENCY", "TEMPERATURE_CORE"};

@@ -102,7 +102,7 @@ namespace geopm
             struct perf_event_attr pea;
             uint64_t id1, id2;
             uint64_t val1, val2;
-            //char buf[4096];
+            //char buf[4096]={0,};
             //struct read_format* rf = (struct read_format*) buf;
             long long count;
 
@@ -138,8 +138,8 @@ namespace geopm
                 M_SIGNAL_REGION_HINT,
                 M_SIGNAL_REGION_RUNTIME,
                 M_SIGNAL_REGION_COUNT,
-		            M_SIGNAL_REGION_FREQ,
-		            M_SIGNAL_REGION_TEMP,
+		        M_SIGNAL_REGION_FREQ,
+		        M_SIGNAL_REGION_TEMP,
                 M_NUM_SIGNAL,
             };
 
@@ -148,9 +148,10 @@ namespace geopm
                 uint64_t hint;
                 double runtime;
                 uint64_t count;
-		            double freq;
-		            double temp;
+		        double freq;
+		        double temp;
                 long long cycles;
+                std::string hostnames;
             };
 
             const int M_PRECISION;
