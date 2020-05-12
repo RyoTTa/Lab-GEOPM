@@ -98,14 +98,6 @@ namespace geopm
             static std::vector<std::string> sample_names(void);
             
             /*perf_event_open test*/
-            int fd[12];
-            struct perf_event_attr pea;
-            uint64_t id1, id2;
-            uint64_t val1, val2;
-            //char buf[4096]={0,};
-            //struct read_format* rf = (struct read_format*) buf;
-            long long count;
-
             struct read_format {
                 uint64_t nr;
                 struct {
@@ -113,6 +105,14 @@ namespace geopm
                     uint64_t id;
                 } values[];
             };
+
+            struct read_format* rf = (struct read_format*) buf;
+            int fd[12][12];
+            struct perf_event_attr pea;
+            uint64_t id[12][12];
+            long long val[12][12];
+            char buf[4096]={0,};
+            long long count;
             
             std::ofstream outFile;
             std::ifstream inFile;
@@ -151,6 +151,7 @@ namespace geopm
 		        double freq;
 		        double temp;
                 long long cycles;
+                long long p_faults;
                 std::string hostnames;
             };
 

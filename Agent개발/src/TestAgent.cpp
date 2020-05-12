@@ -72,6 +72,7 @@
 
 using json11::Json;
 
+
 namespace geopm
 {
     TestAgent::TestAgent()
@@ -106,30 +107,42 @@ namespace geopm
     {
     
     /*perf_event_open test*/
+        for(int i=0; i<4096;i++){
+            buf[i] = 0;
+        }
         memset(&pea, 0, sizeof(struct perf_event_attr));
-        //pea.type = PERF_TYPE_HARDWARE;
-        //pea.type = PERF_TYPE_SOFTWARE;
-        pea.type = PERF_TYPE_HW_CACHE;
+        pea.type = PERF_TYPE_HARDWARE;
         pea.size = sizeof(struct perf_event_attr);
-        //pea.config = PERF_COUNT_HW_CACHE_MISSES;
-        //pea.config = PERF_COUNT_SW_PAGE_FAULTS;
-        pea.config = (PERF_COUNT_HW_CACHE_LL)|(PERF_COUNT_HW_CACHE_OP_WRITE << 8)|(PERF_COUNT_HW_CACHE_RESULT_MISS << 16);
+        pea.config = PERF_COUNT_HW_CPU_CYCLES;
         pea.disabled = 1;
         pea.exclude_kernel = 1;
         pea.exclude_hv = 1;
-        
-        /*multi file descriptor*/
-        for(int i=0; i<12; i++){
-            fd[i] = syscall(__NR_perf_event_open, &pea, -1, i, -1, 0);
-            ioctl(fd[i], PERF_EVENT_IOC_RESET, 0);
-            ioctl(fd[i], PERF_EVENT_IOC_ENABLE, 0);
+        pea.read_format = PERF_FORMAT_GROUP | PERF_FORMAT_ID;
+
+        for(int i=0 ; i<12; i++){
+            fd[i][0] = syscall(__NR_perf_event_open, &pea, -1, i, -1, 0);
+            ioctl(fd[i][0], PERF_EVENT_IOC_ID, &id[i][0]);
         }
-        /*single file descriptor*/
-       /*
-        fd[0] = syscall(__NR_perf_event_open, &pea, 0, -1, -1, 0);
-        ioctl(fd[0], PERF_EVENT_IOC_RESET, 0);
-        ioctl(fd[0], PERF_EVENT_IOC_ENABLE, 0);
-        */
+
+        memset(&pea, 0, sizeof(struct perf_event_attr));
+        pea.type = PERF_TYPE_SOFTWARE;
+        pea.size = sizeof(struct perf_event_attr);
+        pea.config = PERF_COUNT_SW_PAGE_FAULTS;
+        pea.disabled = 1;
+        pea.exclude_kernel = 1;
+        pea.exclude_hv = 1;
+        pea.read_format = PERF_FORMAT_GROUP | PERF_FORMAT_ID;
+
+        for(int i=0; i<12; i++){
+            fd[i][1] = syscall(__NR_perf_event_open, &pea, -1, i, fd[i][0], 0);
+            ioctl(fd[i][1], PERF_EVENT_IOC_ID, &id[i][1]);
+        }
+
+        for(int i=0; i<12; i++){
+            ioctl(fd[i][0], PERF_EVENT_IOC_RESET, PERF_IOC_FLAG_GROUP);
+            ioctl(fd[i][0], PERF_EVENT_IOC_ENABLE, PERF_IOC_FLAG_GROUP);
+        }
+
         outFile.open("/root/test.dat");
         inFile.open("/etc/hostname");
         
@@ -281,17 +294,17 @@ namespace geopm
         double freq_step = m_freq_governor->get_frequency_step();
 
         outFile << model_name << "\n";
-        //outFile << "hostname : " <<' ' << getenv("lscpu") << "\n";
         for (size_t ctl_idx = 0; ctl_idx < (size_t) m_num_freq_ctl_domain; ++ctl_idx) {
             
             /*multi file descriptor*/
-            ioctl(fd[ctl_idx], PERF_EVENT_IOC_DISABLE, 0);
-            read(fd[ctl_idx], &count, sizeof(long long));
-            /*single file descriptor*/
-            /*
-            ioctl(fd[0], PERF_EVENT_IOC_DISABLE, 0);
-            read(fd[0], &count, sizeof(long long));
-            */
+            ioctl(fd[ctl_idx][0], PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP);
+            read(fd[ctl_idx][0], buf, sizeof(buf));
+            for (uint64_t i = 0; i < rf->nr; i++) {
+                if (rf->values[i].id == id[ctl_idx][i]) {
+                    val[ctl_idx][i] = rf->values[i].value;
+                }
+            }
+
             struct m_region_info_s current_region_info {
                 .hash = (uint64_t)m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_HASH][ctl_idx]),
                 .hint = (uint64_t)m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_HINT][ctl_idx]),
@@ -299,10 +312,12 @@ namespace geopm
                 .count = (uint64_t)m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_COUNT][ctl_idx]),
 		        .freq = m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_FREQ][ctl_idx]),
 		        .temp = m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_TEMP][ctl_idx]),
-                .cycles = count,
+                .cycles = val[ctl_idx][0],
+                .p_faults = val[ctl_idx][1],
                 .hostnames = model_name
                 };
-            outFile << ctl_idx <<' ' << current_region_info.cycles << "\n";
+            outFile << ctl_idx <<" cycles : " << current_region_info.cycles << "\n";
+            outFile << ctl_idx <<" page faults : " << current_region_info.p_faults << "\n";
             // If region hash has changed, or region count changed for the same region
             // update current region (entry)
             if (m_last_region_info[ctl_idx].hash != current_region_info.hash ||
@@ -342,8 +357,8 @@ namespace geopm
                 ++m_samples_since_boundary[ctl_idx];
             }
             //multi file descriptor
-            ioctl(fd[ctl_idx], PERF_EVENT_IOC_RESET, 0);
-            ioctl(fd[ctl_idx], PERF_EVENT_IOC_ENABLE, 0);
+            ioctl(fd[ctl_idx][0], PERF_EVENT_IOC_RESET, PERF_IOC_FLAG_GROUP);
+            ioctl(fd[ctl_idx][0], PERF_EVENT_IOC_ENABLE, PERF_IOC_FLAG_GROUP);
             count=0;
         }
         //single file descriptor
