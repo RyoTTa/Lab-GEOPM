@@ -67,6 +67,7 @@
 #include <fstream>
 #include <string>
 #include <stdlib.h>
+#include <time.h>
 
 /*perf_event_oepn test*/
 
@@ -87,7 +88,7 @@ namespace geopm
                                                std::shared_ptr<FrequencyGovernor> gov,
                                                std::map<uint64_t, std::shared_ptr<TestRegion> > region_map)
         : M_PRECISION(16)
-        , M_WAIT_SEC(0.005)
+        , M_WAIT_SEC(0.5)
         , M_MIN_LEARNING_RUNTIME(M_WAIT_SEC * 10)
         , M_NETWORK_NUM_SAMPLE_DELAY(2)
         , M_UNMARKED_NUM_SAMPLE_DELAY(2)
@@ -147,6 +148,10 @@ namespace geopm
         inFile.open("/etc/hostname");
         
         getline(inFile,model_name);
+
+        outFile << "{\n\t\""<<"node_name"<<"\": \""<< model_name << "\",\n";
+        
+        block_count = 0;
     /*perf_event_open test*/
         
     }
@@ -292,8 +297,8 @@ namespace geopm
         double freq_min = m_freq_governor->get_frequency_min();
         double freq_max = m_freq_governor->get_frequency_max();
         double freq_step = m_freq_governor->get_frequency_step();
-
-        outFile << model_name << "\n";
+        outFile <<"\t\""<<block_count++<<"\": "<<"[\n";
+        outFile <<"\t\t\"time\": "<< clock() <<"\n";
         for (size_t ctl_idx = 0; ctl_idx < (size_t) m_num_freq_ctl_domain; ++ctl_idx) {
             
             /*multi file descriptor*/
@@ -304,7 +309,6 @@ namespace geopm
                     val[ctl_idx][i] = rf->values[i].value;
                 }
             }
-
             struct m_region_info_s current_region_info {
                 .hash = (uint64_t)m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_HASH][ctl_idx]),
                 .hint = (uint64_t)m_platform_io.sample(m_signal_idx[M_SIGNAL_REGION_HINT][ctl_idx]),
@@ -316,8 +320,12 @@ namespace geopm
                 .p_faults = val[ctl_idx][1],
                 .hostnames = model_name
                 };
-            outFile << ctl_idx <<" cycles : " << current_region_info.cycles << "\n";
-            outFile << ctl_idx <<" page faults : " << current_region_info.p_faults << "\n";
+            outFile <<"\t\t\"core_"<<ctl_idx<<"\": [\n"
+            <<"\t\t\t{\"eventName\": "<< "\"cycles\"" << ","
+            <<"\"values\": "<< current_region_info.cycles << "},\n"
+            <<"\t\t\t{\"eventName\": "<< "\"page_faults\"" << ","
+            <<"\"values\": "<< current_region_info.p_faults << "}\n"
+            <<"\t\t]\n";
             // If region hash has changed, or region count changed for the same region
             // update current region (entry)
             if (m_last_region_info[ctl_idx].hash != current_region_info.hash ||
@@ -361,6 +369,7 @@ namespace geopm
             ioctl(fd[ctl_idx][0], PERF_EVENT_IOC_ENABLE, PERF_IOC_FLAG_GROUP);
             count=0;
         }
+        outFile <<"\t]\n";
         //single file descriptor
         /*
         ioctl(fd[0], PERF_EVENT_IOC_RESET, 0);
