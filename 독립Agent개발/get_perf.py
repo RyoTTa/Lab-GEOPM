@@ -7,12 +7,16 @@ import time
 # Parameter
 # python3 get_perf_max.py bench_name count thread
 
+
+
 try:
     list_splited = []
     list_str = []
     dic_result = {}
     dic_temp = {}
     text_temp = []
+    uncore_ratio = ['1919', '1515', '1212', '0F0F', '0C0C']
+    ratio_index = 0
 
     def translate(line): 
         if len(line) == 3 :
@@ -45,8 +49,8 @@ try:
 # make shell command and run it. 'result' is program result
 # perf save result file in currunt directory, nadmed 'perf_result.txt'
     
-    os.system("sudo wrmsr -p0 0x620H 0x0000000000001919")
-    os.system("sudo wrmsr -p20 0x620H 0x0000000000001919")
+    os.system(f"sudo wrmsr -p0 0x620H 0x000000000000{uncore_ratio[0]}")
+    os.system(f"sudo wrmsr -p20 0x620H 0x000000000000{uncore_ratio[0]}")
 
     perf_commnad = f'perf stat -a -M {event_1} -e {event_2} -I 300 ./{path} >a.out'
     print(perf_commnad)
@@ -106,18 +110,21 @@ try:
 
         cur_l3load = float(dic_result['LLC-loads'])
         
-        if float(cur_l3load - past_l3load)/past_l3load > 0.001 :
-            if state != True :
-                os.system("sudo wrmsr -p0 0x620H 0x0000000000001919")
-                os.system("sudo wrmsr -p20 0x620H 0x0000000000001919")
-                print(f"U cur_l3load {cur_l3load} past_l3load {past_l3load}")
-                state = True
-        elif float(cur_l3load - past_l3load)/past_l3load < -0.1 : 
-            if state != False : 
-                os.system("sudo wrmsr -p0 0x620H 0x0000000000000C0C")
-                os.system("sudo wrmsr -p20 0x620H 0x0000000000000C0C")
-                print(f"D cur_l3load {cur_l3load} past_l3load {past_l3load}")
-                state = False
+        if float(cur_l3load)/float(past_l3load) > 1.1 :
+            if ratio_index != 0 :
+                ratio_index = 0
+                os.system(f"sudo wrmsr -p0 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
+                os.system(f"sudo wrmsr -p0 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
+                print(f"U {uncore_ratio[ratio_index]} cur_l3load {cur_l3load} past_l3load {past_l3load}")
+
+        elif float(cur_l3load)/float(past_l3load) < 0.9 : 
+            if ratio_index < len(uncore_ratio) -1 : 
+                ratio_index += 1
+                os.system(f"sudo wrmsr -p0 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
+                os.system(f"sudo wrmsr -p0 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
+                print(f"D {uncore_ratio[ratio_index]} cur_l3load {cur_l3load} past_l3load {past_l3load}")
+            
+
         
         power += float(dic_result['power/energy-pkg/'])
         past_l3load = cur_l3load
@@ -129,8 +136,8 @@ try:
     
     ##print(result)
     
-    os.system("sudo wrmsr -p0 0x620H 0x0000000000001919")
-    os.system("sudo wrmsr -p20 0x620H 0x0000000000001919")
+    os.system(f"sudo wrmsr -p0 0x620H 0x0000000000000C18")
+    os.system(f"sudo wrmsr -p20 0x620H 0x0000000000000C18")
 
 
 # open perf output file, and if word in line have 'metric_list' element, that line save into list
