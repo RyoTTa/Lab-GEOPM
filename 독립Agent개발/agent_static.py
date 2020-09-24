@@ -11,8 +11,8 @@ import time
 
 try:
     dic_result = {}
-    uncore_ratio = ['1919', '1515', '1212', '0F0F', '0C0C']
-    # 2.5GHz
+    uncore_ratio = ['1919', '1717', '1515', '1313', '1111', '0F0F', '0C0C']
+    # 2.5GHz 2.3GHz 2.1GHz 1.9GHz 1.7GHz 1.5GHz 1.2GHz
     ratio_index = 0
 
     def translate(line): 
@@ -25,7 +25,7 @@ try:
         
     
 # if you want another perf 'Metric groups' event, add it the list below.
-    metric_list = ["Instructions","CPI"]
+    metric_list = ["Instructions","CPU_Utilization","CPI"]
     event_1 = ' -M '.join(metric_list)
 
     #predefined_list = ["llc_misses.mem_read","llc_misses.mem_write","unc_m_act_count.wr","unc_m_cas_count.all","unc_m_power_channel_ppd","unc_m_pre_count.rd","unc_m_pre_count.wr","unc_m_rpq_inserts","unc_m_wpq_inserts","power/energy-pkg/","power/energy-ram/"]
@@ -88,38 +88,73 @@ try:
         power += float(dic_result['power/energy-pkg/'])
 
         if float(cur_CPI) > float(past_CPI) : 
-            
-        
-        if float(cur_l3load)/float(past_l3load) > 1.1 :
-            if cur_CPI < 1 :
-                if ratio_index != len(uncore_ratio) -1 :
-                    ratio_index = len(uncore_ratio) -1
-                    os.system(f"sudo wrmsr -p0 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
-                    os.system(f"sudo wrmsr -p20 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
-                    print(f"DD {uncore_ratio[ratio_index]} cur_l3load {cur_l3load} past_l3load {past_l3load}")
-            else :
+            if float(cur_LAPI) / float(past_LAPI) > 1.1 : 
                 if ratio_index != 0 :
                     ratio_index = 0
                     os.system(f"sudo wrmsr -p0 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
                     os.system(f"sudo wrmsr -p20 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
-                    print(f"U {uncore_ratio[ratio_index]} cur_l3load {cur_l3load} past_l3load {past_l3load}")
+                    print(f"UUU {uncore_ratio[ratio_index]} cur_LAPI {cur_LAPI} past_LAPI {past_LAPI}")
 
-        elif float(cur_l3load)/float(past_l3load) < 0.9 : 
-            if cur_CPI > 2.5 : 
-                if ratio_index != 0 :
-                    ratio_index = 0
-                    os.system(f"sudo wrmsr -p0 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
-                    os.system(f"sudo wrmsr -p20 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
-                    print(f"UU {uncore_ratio[ratio_index]} cur_l3load {cur_l3load} past_l3load {past_l3load}")
-            else:
+            elif float(cur_LAPI) / float(past_LAPI) < 0.5 : 
                 if ratio_index < len(uncore_ratio) -1 : 
                     ratio_index += 1
                     os.system(f"sudo wrmsr -p0 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
                     os.system(f"sudo wrmsr -p20 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
-                    print(f"D {uncore_ratio[ratio_index]} cur_l3load {cur_l3load} past_l3load {past_l3load}")
-            
-        power += float(dic_result['power/energy-pkg/'])
-        past_l3load = cur_l3load
+                    print(f"D {uncore_ratio[ratio_index]} cur_LAPI {cur_LAPI} past_LAPI {past_LAPI}")
+
+            else :
+                if ratio_index != 0 :
+                    ratio_index -= 1
+                    os.system(f"sudo wrmsr -p0 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
+                    os.system(f"sudo wrmsr -p20 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
+                    print(f"U {uncore_ratio[ratio_index]} cur_LAPI {cur_LAPI} past_LAPI {past_LAPI}")
+
+        elif float(cur_CPI) < float(past_CPI) : 
+            if float(cur_LAPI) / float(past_LAPI) > 1.1 : 
+                if ratio_index != 0 :
+                    ratio_index -= 1
+                    os.system(f"sudo wrmsr -p0 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
+                    os.system(f"sudo wrmsr -p20 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
+                    print(f"U {uncore_ratio[ratio_index]} cur_LAPI {cur_LAPI} past_LAPI {past_LAPI}")
+
+            elif float(cur_LAPI) / float(past_LAPI) < 0.5 : 
+                if ratio_index < len(uncore_ratio) -1 : 
+                    ratio_index = len(uncore_ratio) -1
+                    os.system(f"sudo wrmsr -p0 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
+                    os.system(f"sudo wrmsr -p20 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
+                    print(f"DDD {uncore_ratio[ratio_index]} cur_LAPI {cur_LAPI} past_LAPI {past_LAPI}")
+            else :
+                if ratio_index < len(uncore_ratio) -1 and cur_CPI < 1 : 
+                    ratio_index += 1
+                    os.system(f"sudo wrmsr -p0 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
+                    os.system(f"sudo wrmsr -p20 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
+                    print(f"D {uncore_ratio[ratio_index]} cur_LAPI {cur_LAPI} past_LAPI {past_LAPI}")
+
+        else : 
+            if float(cur_LAPI) / float(past_LAPI) > 1.1 : 
+                if ratio_index != 0 :
+                    ratio_index -= 1
+                    os.system(f"sudo wrmsr -p0 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
+                    os.system(f"sudo wrmsr -p20 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
+                    print(f"U {uncore_ratio[ratio_index]} cur_LAPI {cur_LAPI} past_LAPI {past_LAPI}")
+                    
+            elif float(cur_LAPI) / float(past_LAPI) < 0.5 : 
+                if ratio_index < len(uncore_ratio) -1 : 
+                    ratio_index += 1
+                    os.system(f"sudo wrmsr -p0 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
+                    os.system(f"sudo wrmsr -p20 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
+                    print(f"D {uncore_ratio[ratio_index]} cur_LAPI {cur_LAPI} past_LAPI {past_LAPI}")
+
+            else :                    
+                if ratio_index < len(uncore_ratio) -1 and cur_CPI < 1 : 
+                    ratio_index += 1
+                    os.system(f"sudo wrmsr -p0 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
+                    os.system(f"sudo wrmsr -p20 0x620H 0x000000000000{uncore_ratio[ratio_index]}")
+                    print(f"D {uncore_ratio[ratio_index]} cur_LAPI {cur_LAPI} past_LAPI {past_LAPI}")
+
+
+        past_LAPI = cur_LAPI
+        past_CPI = cur_CPI
         dic_result = {}
 
     print(power)
